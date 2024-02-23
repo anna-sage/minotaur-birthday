@@ -71,6 +71,8 @@ public class Labyrinth
     public void guestTraverseLabyrinth(long guestId)
     {
         System.out.println("\t" + guestId + " traversing");
+        amtInLabyrinth++;
+
         Random rand = new Random();
         int traverseTime = rand.nextInt(6) + 1;
         try
@@ -123,11 +125,12 @@ public class Labyrinth
             }
         }
 
+        amtInLabyrinth--;
         return guestStatus;
     }
 
     // Attempt to eat the cupcake. Returns whether the guest was able to eat.
-    public synchronized boolean tryEating(long id)
+    public boolean tryEating(long id)
     {
         System.out.println("\tGuest " + id + ": \"I'm hungry!\"");
         if (cupcake)
@@ -147,19 +150,6 @@ public class Labyrinth
         cupcake = true;
     }
 
-    // Logic necessary for encountering the end of the maze.
-    public synchronized boolean updateCounter(long myId)
-    {
-        // Am I the guest responsible for counting? And do I need to ask for a replacement?
-        if (myId == firstGuest && !cupcake)
-        {
-            replaceCupcake(myId);
-            return true;
-        }
-
-        return false;
-    }
-
     // Getters and setters.
 
     public long getNextToEnter()
@@ -175,6 +165,11 @@ public class Labyrinth
     public boolean getAllGuestsEntered()
     {
         return allGuestsEntered;
+    }
+
+    public int getAmtInLabyrinth()
+    {
+        return amtInLabyrinth;
     }
 
     public void setAllGuestsEntered(boolean val)

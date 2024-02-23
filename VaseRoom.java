@@ -2,6 +2,8 @@
 
 import java.util.concurrent.*; // todo consolidate
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
 import java.util.Random;
 
 public class VaseRoom
@@ -14,12 +16,15 @@ public class VaseRoom
     int numGuests;
     int numViewers; // How many have seen the case?
 
+    CLHQ myQ;
+
     VaseRoom(int num)
     {
         roomTaken = new AtomicBoolean(false);
         guestIds = new long [numGuests];
         numGuests = num;
         numViewers = 0;
+        myQ = new CLHQ();
     }
 
     // Simple TTAS lock.
@@ -41,7 +46,7 @@ public class VaseRoom
     }
 
     // Actually try to enter the room.
-    public void viewVase(long id, boolean hasSeenVase)
+    public void viewVaseTTAS(long id, boolean hasSeenVase)
     {
         lockTTAS();
         System.out.println("\nGuest " + id + " is viewing the vase...");
@@ -65,6 +70,31 @@ public class VaseRoom
         unlockTTAS();
     }
 
+    // CLHQ viewing.
+    public void viewVaseCLHQ(long id, boolean hasSeenVase)
+    {
+        myQ.lock();
+        System.out.println("\nGuest " + id + " is viewing the vase...");
+
+        try
+        {
+            TimeUnit.MILLISECONDS.sleep(TIME_TO_VIEW);
+        }
+        catch (Exception e)
+        {
+            System.out.println(e.getMessage());
+        }
+
+        System.out.println("Guest " + id + " leaves the viewing room.");
+
+        if (!hasSeenVase)
+        {
+            numViewers++;
+        }
+
+        myQ.unlock();
+    }
+
     // Get the amount of guests who have viewed the vase at least once.
     public boolean allViewedVase()
     {
@@ -77,58 +107,76 @@ public class VaseRoom
     }
 }
 
-// class CLHQ implements Lock
-// {
-//     AtomicReference<Qnode> tail;
-//     ThreadLocal<Qnode> myPred;
-//     ThreadLocal<QNode> myNode;
+class CLHQ
+{
+    AtomicBoolean tail;
+    // ThreadLocal<QNode> myPred;
+    // ThreadLocal<QNode> myNode;
 
-//     // Constructor initializes the node and makes the predecessor null.
-//     CLHQ()
-//     {
-//         this.tail = new AtomicReference<Qnode>(new Qnode());
+    // Constructor initializes the node and makes the predecessor null.
+    CLHQ()
+    {
+        this.tail.set(false);
 
-//         // Initialize thread local node.
-//         this.myNode = new ThreadLocal<Qnode>() 
-//         {
-//             protected Qnode initialValue() 
-//             {
-//                 return new Qnode();
-//             }
-//         };
+        // Initialize thread local node.
+        this.myNode = new ThreadLocal<QNode>() 
+        {
+            protected QNode initialValue() 
+            {
+                return new QNode();
+            }
+        };
 
-//         // Initialize the prev node to null.
-//         this.myPred = new ThreadLocal<Qnode>()
-//         {
-//             protected Qnode initialValue()
-//             {
-//                 return null;
-//             }
-//         };
-//     }
+        // Initialize the prev node to null.
+        this.myPred = new ThreadLocal<QNode>()
+        {
+            protected QNode initialValue()
+            {
+                return null;
+            }
+        };
+    }
 
-//     // Acquire the lock before entering a critical section.
-//     public void lock()
-//     {
-//         Qnode mynode = myNode.get();
-//         mynode.locked = true;
-//         Qnode pred = tail.getAndSet(mynode);
-//         myPred.set(pred);
-//     }
-// }
+    // Acquire the lock before entering a critical section.
+    public void lock()
+    {
+        System.out.println("Trying to get lock");
+        boolean myVal = Thread.currentThread().getMyVal();
+        Thread.currentThread().setMyVal(true);
 
-// class Qnode
-// {
-//     AtomicBoolean locked = new AtomicBoolean(true);
+        boolean pred = tail.getAndSet(myVal);
+        boolean myPred = Thread.currentThread().getMyPred();
+        Thread.currentThread().setMyPred(pred);
+        while (pred.locked) {}
+    }
 
-//     // Returns a reference to this node.
-//     public Qnode get()
-//     {
-//         return this; // todo is this valid?
-//     }
+    public void unlock()
+    {
+        boolean myVal = Thread.currentThread().getMyVal();
+        Thread.currentThread().setMyVal(false);
+        boolean myPred = Thread.currentThreas().getMyPred();
+        Thread.currentThread().setMyVal(myPred);
+        System.out.println("unlocked");
+    }
+}
 
-//     public void set(Qnode newNode)
-//     {
-//         this = newNode;
-//     }
-// }
+class QNode
+{
+    public boolean locked;
+
+    public QNode()
+    {
+        locked = false;
+    }
+
+    // // Returns a reference to this node.
+    // public QNode get()
+    // {
+    //     return this; // todo is this valid?
+    // }
+
+    // public void set(QNode newNode)
+    // {
+    //     this = newNode;
+    // }
+}

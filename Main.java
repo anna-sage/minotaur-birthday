@@ -9,7 +9,7 @@ import java.util.Random;
 
 public class Main
 {
-    public static final int NUM_GUESTS = 8;
+    public static final int NUM_GUESTS = 3;
 
     public static void main(String [] args)
     {
@@ -30,13 +30,14 @@ public class Main
         maze.setGuestIds(guestIds);
         room.setGuestIds(guestIds);
 
+        long start = System.nanoTime();
         for (int i = 0; i < NUM_GUESTS; i++)
         {
             guests[i].start();
         }
 
         // Have the minotaur start calling guests.
-        maze.minotaurCallGuest();
+        // maze.minotaurCallGuest();
 
         // Wait for all threads to conclude.
         for (int i = 0; i < NUM_GUESTS; i++)
@@ -50,6 +51,9 @@ public class Main
                 System.out.println(e.getMessage());
             }
         }
+
+        long end = System.nanoTime();
+        System.out.println("\n" + (end - start));
     }
 }
 
@@ -60,53 +64,80 @@ class Guest implements Runnable
     private Labyrinth maze; // Reference to current maze.
     private VaseRoom room; // Reference to current vase room.
 
+    // For CLHQ:
+    private Boolean myVal;
+    private Boolean myPred;
+
     Guest(Labyrinth mazeArg, VaseRoom roomArg)
     {
         maze = mazeArg;
         room = roomArg;
         myStatus = new Status(0, false);
+
+        myVal = false;
+        myPred = null;
     }
 
     public void run()
     {
         long myId = Thread.currentThread().getId();
 
-        // Problem 1: All guests traverse the labyrinth.
-        while (!maze.getAllGuestsEntered())
-        {
-            // Wait for the minotaur to call me.
-            long idCalled = -1;
-            while (idCalled != myId && !maze.getAllGuestsEntered()) 
-            {
-                // Do nothing since this guest hasn't been called yet.
-                System.out.print("");
-                idCalled = maze.getNextToEnter();
-            }
+        // // Problem 1: All guests traverse the labyrinth.
+        // while (!maze.getAllGuestsEntered())
+        // {
+        //     // Wait for the minotaur to call me.
+        //     long idCalled = -1;
+        //     while (idCalled != myId && !maze.getAllGuestsEntered()) 
+        //     {
+        //         // Do nothing since this guest hasn't been called yet.
+        //         System.out.print("");
+        //         idCalled = maze.getNextToEnter();
+        //     }
 
-            // The minotaur called me.
-            if (idCalled == myId)
-            {
-                System.out.println("Minotaur called guest" + myId);
-                maze.resetNextToEnter();
-                maze.guestTraverseLabyrinth(myId);
-                myStatus = maze.exitProcedure(myId, myStatus);
-    
-                if (!myStatus.hasEaten)
-                    myStatus.hasEaten = maze.tryEating(myId);
-    
-                // Update the counter and request new cupcake if necessary.
-                myStatus.counter = maze.updateCounter(myId) ? myStatus.counter + 1 : myStatus.counter;
-            }
-        }
+        //     // The minotaur called me.
+        //     if (idCalled == myId)
+        //     {
+        //         System.out.println("Minotaur called guest" + myId);
+        //         maze.resetNextToEnter();
+        //         maze.guestTraverseLabyrinth(myId);
+        //         myStatus = maze.exitProcedure(myId, myStatus);
+        //     }
+        // }
+
+        // while (maze.getAmtInLabyrinth() > 0) {} // Let the labyrinth game end.
 
         // Problem 2: viewing the crystal vase with mutual exclusion.
-        Random rand = new Random(); // To help decide when to view vase.
-        while (!room.allViewedVase())
-        {
-            while (rand.nextInt(4) != 3) {}
-            room.viewVase(myId, myStatus.hasSeenVase);
-            myStatus.hasSeenVase = true;
-        }
+        // Random rand = new Random(); // To help decide when to view vase.
+        // room.viewVaseTTAS(myId, myStatus.hasSeenVase);
+        room.viewVaseCLHQ(myId, myStatus.hasSeenVase);
+        // while (!room.allViewedVase())
+        // {
+        //     while (rand.nextInt(4) != 3) {}
+        //     room.viewVase(myId, myStatus.hasSeenVase);
+        //     myStatus.hasSeenVase = true;
+        // }
+    }
+
+    // Getters and setters for CLHQ
+
+    public Boolean getMyVal()
+    {
+        return myVal;
+    }
+
+    public void setMyVal(Boolean val)
+    {
+        myVal = val;
+    }
+
+    public Boolean getMyPred()
+    {
+        return myPred;
+    }
+
+    public void setMyPred(Boolean val)
+    {
+        myPred = val;
     }
 }
 
