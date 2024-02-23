@@ -50,7 +50,7 @@ public class Labyrinth
         while (!allGuestsEntered)
         {
             // Wait some random time amount of time.
-            int waitTime = rand.nextInt(21) + 1;
+            int waitTime = rand.nextInt(3) + 1;
             try
             {
                 TimeUnit.MILLISECONDS.sleep(waitTime);
@@ -64,6 +64,8 @@ public class Labyrinth
             int guestIdx = rand.nextInt(numGuests);
             guests[guestIdx].submit(new GuestMazeTask());
         }
+
+        System.out.println("A guest reports that all guests have traversed at least once!");
     }
 
     public void setCounterThread()
@@ -75,7 +77,7 @@ public class Labyrinth
     // A guest takes some random amount of time to traverse the labyrinth.
     public void guestTraverseLabyrinth(String guestName)
     {
-        System.out.println(guestName + " traversing.");
+        // System.out.println(guestName + " traversing.");
         amtInLabyrinth.getAndIncrement();
 
         Random rand = new Random();
@@ -116,10 +118,7 @@ public class Labyrinth
             }
 
             if (node.counter == (numGuests - 1))
-            {
                 allGuestsEntered = true;
-                System.out.println(name + " reports that all guests have traversed the labyrinth!");
-            }
         }
 
         amtInLabyrinth.getAndDecrement();

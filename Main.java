@@ -12,7 +12,7 @@ import java.util.Random;
 
 public class Main
 {
-    public static final int NUM_GUESTS = 4;
+    public static final int NUM_GUESTS = 100;
 
     public static void main(String [] args)
     {
@@ -40,8 +40,6 @@ public class Main
         // }
 
         // Have the minotaur start calling guests.
-        System.out.println("Problem 1: Labyrinth");
-        System.out.println("================================");
         maze.minotaurCallGuest(guests);
 
         // Wait for guests to finish labyrinth game before printing problem 2.
@@ -56,6 +54,9 @@ public class Main
                 System.out.println(e.getMessage());
             }
         }
+
+        // Allow guests to view the crystal vase.
+        room.beginVaseViewing(guests);
 
 
         for (int i = 0; i < NUM_GUESTS; i++)

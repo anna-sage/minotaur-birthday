@@ -2,18 +2,20 @@
 
 import java.util.concurrent.*; // todo consolidate
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.Random;
+import java.util.HashSet;
 
 public class VaseRoom
 {
-    private final int TIME_TO_VIEW = 500; // Amount of milliseconds to view vase.
+    private final int TIME_TO_VIEW = 5; // Amount of milliseconds to view vase.
 
     // Acts as the lock for the critical section (viewing the vase in the room).
     AtomicBoolean roomTaken;
     int numGuests;
-    int numViewers; // How many have seen the case?
+    // int numViewers; // How many have seen the vase?
 
     CLHQ myCLHQ;
     MCSQ myMCSQ;
@@ -22,7 +24,7 @@ public class VaseRoom
     ThreadLocal<Boolean> seenVase;
 
     // Thread task to enter the viewing room.
-    class GuestMazeTask implements Runnable
+    class GuestVaseTask implements Runnable
     {
         public void run()
         {
@@ -35,7 +37,7 @@ public class VaseRoom
     {
         roomTaken = new AtomicBoolean(false);
         numGuests = num;
-        numViewers = 0;
+        // numViewers = 0;
         myCLHQ = new CLHQ();
         myMCSQ = new MCSQ();
 
@@ -44,9 +46,18 @@ public class VaseRoom
 
     public void beginVaseViewing(ExecutorService [] guests)
     {
-        while (!(numViewers < numGuests))
+        Random rand = new Random();
+        HashSet<Integer> idxsViewed = new HashSet<>();
+
+        // Stop earlier when there are more guests.
+        int stoppingPoint = numGuests >= 50 ? numGuests / 2 : numGuests;
+
+        while (idxsViewed.size() < stoppingPoint)
         {
-            int i;
+            // Generate a random thread to view the vase.
+            int guestIdx = rand.nextInt(numGuests);
+            guests[guestIdx].submit(new GuestVaseTask());
+            idxsViewed.add(guestIdx);
         }
     }
 
@@ -90,10 +101,10 @@ public class VaseRoom
 
         System.out.println(name + " leaves the viewing room.");
 
-        if (!hasSeenVase)
-        {
-            numViewers++;
-        }
+        // if (!hasSeenVase)
+        // {
+        //     numViewers++;
+        // }
 
         unlockTTAS();
     }
@@ -115,10 +126,10 @@ public class VaseRoom
 
         System.out.println("Guest " + id + " leaves the viewing room.");
 
-        if (!hasSeenVase)
-        {
-            numViewers++;
-        }
+        // if (!hasSeenVase)
+        // {
+        //     numViewers++;
+        // }
 
         myCLHQ.unlock();
     }
@@ -140,19 +151,19 @@ public class VaseRoom
 
         System.out.println("Guest " + id + " leaves the viewing room.");
 
-        if (!hasSeenVase)
-        {
-            numViewers++;
-        }
+        // if (!hasSeenVase)
+        // {
+        //     numViewers++;
+        // }
 
         myMCSQ.unlock();
     }
 
     // Get the amount of guests who have viewed the vase at least once.
-    public boolean allViewedVase()
-    {
-        return !(numViewers < numGuests);
-    }
+    // public boolean allViewedVase()
+    // {
+    //     return !(numViewers < numGuests);
+    // }
 }
 
 class CLHQ
