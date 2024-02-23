@@ -2,48 +2,55 @@
 import java.util.concurrent.*; // todo consolidate.
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Labyrinth
 {
     // Fields
     private boolean cupcake; // Is a cupcake on the plate?
-    private int numGuests;
-    private long firstGuest; // ID of the first guest to be called in.
-    private long [] guestIds;
-
     // Did the minotaur just call someone or is he waiting?
     private boolean minotaurCalledFirstGuest;
-    private long nextToEnter; // Minotaur calls this guest.
-    private int amtInLabyrinth; // How many are currently inside?
+    private int numGuests;
+    private AtomicInteger amtInLabyrinth; // How many are currently inside?
     private boolean allGuestsEntered;
 
-    // Amount of booleans to return to a guest when they exit.
-    private static final int AMT_RESULTS = 2;
+    // Local thread info node.
+    ThreadLocal<GuestNode> guestInfo;
 
-    Labyrinth(int numG)
+    // Thread task to traverse the labyrinth.
+    class GuestMazeTask implements Runnable
     {
-        // Get ids from main driver class.
-        guestIds = new long [numGuests];
+        public void run()
+        {
+            String name = Thread.currentThread().getName();
+            guestTraverseLabyrinth(name);
+            exitProcedure(name);
+        }
+    }
 
+    public Labyrinth(int numG)
+    {
         cupcake = true;
         numGuests = numG;
-        firstGuest = -1;
-        minotaurCalledFirstGuest = false;
-        nextToEnter = -1;
-        amtInLabyrinth = 0;
+        amtInLabyrinth = new AtomicInteger(0);
         allGuestsEntered = false;
+
+        // Initialize thread local node.
+        guestInfo = ThreadLocal.withInitial(() -> new GuestNode(false, false, 0));
     }
 
     // Summon random guests into the labyrinth until one of the
     // threads indicates that all have had the chance to enter.
-    public void minotaurCallGuest()
+    public void minotaurCallGuest(ExecutorService [] guests)
     {
+        // Designate guest at idx 0 as the counter
+        guests[0].submit(() -> setCounterThread());
         Random rand = new Random();
 
         while (!allGuestsEntered)
         {
             // Wait some random time amount of time.
-            int waitTime = rand.nextInt(6) + 1;
+            int waitTime = rand.nextInt(21) + 1;
             try
             {
                 TimeUnit.MILLISECONDS.sleep(waitTime);
@@ -55,23 +62,21 @@ public class Labyrinth
             
             // Call a random guest into the labyrinth.
             int guestIdx = rand.nextInt(numGuests);
-
-            if (!minotaurCalledFirstGuest)
-            {
-                // Designate the counter guest.
-                firstGuest = guestIds[guestIdx];
-                minotaurCalledFirstGuest = true;
-            }
-
-            nextToEnter = guestIds[guestIdx];
+            guests[guestIdx].submit(new GuestMazeTask());
         }
     }
 
-    // A guest takes some random amount of time to traverse the labyrinth.
-    public void guestTraverseLabyrinth(long guestId)
+    public void setCounterThread()
     {
-        System.out.println("\t" + guestId + " traversing");
-        amtInLabyrinth++;
+        GuestNode myNode = guestInfo.get();
+        myNode.isFirstCalled = true;
+    }
+
+    // A guest takes some random amount of time to traverse the labyrinth.
+    public void guestTraverseLabyrinth(String guestName)
+    {
+        System.out.println(guestName + " traversing.");
+        amtInLabyrinth.getAndIncrement();
 
         Random rand = new Random();
         int traverseTime = rand.nextInt(6) + 1;
@@ -86,99 +91,76 @@ public class Labyrinth
     }
 
     // Strategy for a guest trying to exit.
-    public synchronized Status exitProcedure(long id, Status guestStatus)
+    public void exitProcedure(String name)
     {
-        System.out.println("Guest " + id + " has reached the end!");
+        // Get the current thread's local status node.
+        GuestNode node = guestInfo.get();
+        // System.out.println(name + "'s info:\n" + 
+        //     "isCounter: " + node.isFirstCalled + "\n" + 
+        //     "counter: " + node.counter + "\n" + 
+        //     "hasEaten: " + node.hasEaten + "\n");
 
-        // Try to eat if I haven't yet.
-        boolean ate = false;
-        if (!guestStatus.hasEaten)
+        // Try to eat if I haven't yet and I'm not the counter thread.
+        if (!node.hasEaten && !node.isFirstCalled)
         {
-            ate = tryEating(id);
-            guestStatus.hasEaten = ate;
+            node.hasEaten = tryEating(name);
         }
             
-        if (id == firstGuest)
+        if (node.isFirstCalled)
         {
-            // Replace the cupcake and update my counter.
+            // Replace the cupcake and increment my counter.
             if (!cupcake)
             {
-                replaceCupcake(id);
-                guestStatus.counter++;
+                replaceCupcake(name);
+                node.counter++;
             }
 
-            // Account for case where some thread finishes before
-            // the first thread called gets a chance to eat.
-            if (!ate && !guestStatus.hasEaten)
-            {
-                cupcake = false;
-                System.out.println("\tGuest " + id + ": \"I ate!\"");
-                replaceCupcake(id);
-                guestStatus.hasEaten = true;
-                guestStatus.counter++;
-            }
-
-            if (guestStatus.counter == numGuests)
+            if (node.counter == (numGuests - 1))
             {
                 allGuestsEntered = true;
-                System.out.println("Guest " + id + ": \"All guests have traversed the labyrinth!\"");
+                System.out.println(name + " reports that all guests have traversed the labyrinth!");
             }
         }
 
-        amtInLabyrinth--;
-        return guestStatus;
+        amtInLabyrinth.getAndDecrement();
     }
 
     // Attempt to eat the cupcake. Returns whether the guest was able to eat.
-    public boolean tryEating(long id)
+    public synchronized boolean tryEating(String name)
     {
-        System.out.println("\tGuest " + id + ": \"I'm hungry!\"");
         if (cupcake)
         {
-            System.out.println("\tGuest " + id + ": \"I ate!\"");
+            System.out.println(name + " ate a cupcake!");
             cupcake = false;
             return true; // Was able to eat.
         }
 
-        System.out.println("\tGuest " + id + ": \"Maybe next time.\"");
         return false; // Unable to eat.
     }
 
-    private void replaceCupcake(long id)
+    private void replaceCupcake(String name)
     {
-        System.out.println("\tGuest " + id + " is calling for a replacement");
+        System.out.println(name + " is calling for a replacement");
         cupcake = true;
     }
 
-    // Getters and setters.
-
-    public long getNextToEnter()
-    {
-        return nextToEnter;
-    }
-
-    public void resetNextToEnter()
-    {
-        nextToEnter = -1;
-    }
-
-    public boolean getAllGuestsEntered()
-    {
-        return allGuestsEntered;
-    }
-
+    // Allows main driver to wait until all have finished traversing.
     public int getAmtInLabyrinth()
     {
-        return amtInLabyrinth;
+        return amtInLabyrinth.get();
     }
+}
 
-    public void setAllGuestsEntered(boolean val)
-    {
-        allGuestsEntered = val;
-    }
+class GuestNode
+{
+    public boolean isFirstCalled;
+    public boolean hasEaten;
+    public int counter;
 
-    public void setGuestIds(long [] ids)
+    public GuestNode(boolean first, boolean eaten, int ct)
     {
-        guestIds = ids;
+        isFirstCalled = first;
+        hasEaten = eaten;
+        counter = ct;
     }
 }

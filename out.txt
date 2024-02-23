@@ -1,0 +1,39 @@
+Problem 1: Labyrinth
+================================
+Thread-1 traversing.
+Thread-2 traversing.
+Thread-2 ate a cupcake!
+Thread-1 traversing.
+Thread-2 traversing.
+Thread-0 traversing.
+Thread-0 is calling for a replacement
+Thread-3 traversing.
+Thread-1 traversing.
+Thread-3 ate a cupcake!
+Thread-3 traversing.
+Thread-1 traversing.
+Thread-3 traversing.
+Thread-1 traversing.
+Thread-1 traversing.
+Thread-1 traversing.
+Thread-2 traversing.
+Thread-1 traversing.
+Thread-3 traversing.
+Thread-2 traversing.
+Thread-0 traversing.
+Thread-0 is calling for a replacement
+Thread-3 traversing.
+Thread-2 traversing.
+Thread-3 traversing.
+Thread-2 traversing.
+Thread-0 traversing.
+Thread-1 traversing.
+Thread-1 ate a cupcake!
+Thread-3 traversing.
+Thread-3 traversing.
+Thread-0 traversing.
+Thread-0 is calling for a replacement
+Thread-0 reports that all guests have traversed the labyrinth!
+Thread-0 traversing.
+Thread-0 reports that all guests have traversed the labyrinth!
+Thread-3 traversing.

@@ -12,21 +12,47 @@ public class VaseRoom
 
     // Acts as the lock for the critical section (viewing the vase in the room).
     AtomicBoolean roomTaken;
-    long [] guestIds;
     int numGuests;
     int numViewers; // How many have seen the case?
 
     CLHQ myCLHQ;
     MCSQ myMCSQ;
 
-    VaseRoom(int num)
+    // Thread local tracker for if thread has seen the vase.
+    ThreadLocal<Boolean> seenVase;
+
+    // Thread task to enter the viewing room.
+    class GuestMazeTask implements Runnable
+    {
+        public void run()
+        {
+            String name = Thread.currentThread().getName();
+            viewVaseTTAS(name, getSeenVase());
+        }
+    }
+
+    public VaseRoom(int num)
     {
         roomTaken = new AtomicBoolean(false);
-        guestIds = new long [numGuests];
         numGuests = num;
         numViewers = 0;
         myCLHQ = new CLHQ();
         myMCSQ = new MCSQ();
+
+        seenVase = ThreadLocal.withInitial(() -> false);
+    }
+
+    public void beginVaseViewing(ExecutorService [] guests)
+    {
+        while (!(numViewers < numGuests))
+        {
+            int i;
+        }
+    }
+
+    public boolean getSeenVase()
+    {
+        return seenVase.get();
     }
 
     // Simple TTAS lock.
@@ -48,10 +74,10 @@ public class VaseRoom
     }
 
     // Actually try to enter the room.
-    public void viewVaseTTAS(long id, boolean hasSeenVase)
+    public void viewVaseTTAS(String name, boolean hasSeenVase)
     {
         lockTTAS();
-        System.out.println("\nGuest " + id + " is viewing the vase...");
+        System.out.println("\n" + name + " is viewing the vase...");
 
         try
         {
@@ -62,7 +88,7 @@ public class VaseRoom
             System.out.println(e.getMessage());
         }
 
-        System.out.println("Guest " + id + " leaves the viewing room.");
+        System.out.println(name + " leaves the viewing room.");
 
         if (!hasSeenVase)
         {
@@ -126,11 +152,6 @@ public class VaseRoom
     public boolean allViewedVase()
     {
         return !(numViewers < numGuests);
-    }
-
-    public void setGuestIds(long [] ids)
-    {
-        guestIds = ids;
     }
 }
 
