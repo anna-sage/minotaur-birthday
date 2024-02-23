@@ -1,6 +1,8 @@
 // Author: Anna MacInnis, Last update on 2/19/2024.
 // Part 1: Minotaur's maze with cupcake at the end.
 // Part 2: Minotaur's crystal vase viewing with mutual exclusion.
+// TODO : make sure compilation instructions work.
+// TODO : minimize synchronized behavior
 
 import java.util.concurrent.*; // todo consolidate
 import java.lang.Thread;
@@ -37,7 +39,7 @@ public class Main
         }
 
         // Have the minotaur start calling guests.
-        // maze.minotaurCallGuest();
+        maze.minotaurCallGuest();
 
         // Wait for all threads to conclude.
         for (int i = 0; i < NUM_GUESTS; i++)
@@ -75,27 +77,27 @@ class Guest implements Runnable
     {
         long myId = Thread.currentThread().getId();
 
-        // // Problem 1: All guests traverse the labyrinth.
-        // while (!maze.getAllGuestsEntered())
-        // {
-        //     // Wait for the minotaur to call me.
-        //     long idCalled = -1;
-        //     while (idCalled != myId && !maze.getAllGuestsEntered()) 
-        //     {
-        //         // Do nothing since this guest hasn't been called yet.
-        //         System.out.print("");
-        //         idCalled = maze.getNextToEnter();
-        //     }
+        // Problem 1: All guests traverse the labyrinth.
+        while (!maze.getAllGuestsEntered())
+        {
+            // Wait for the minotaur to call me.
+            long idCalled = -1;
+            while (idCalled != myId && !maze.getAllGuestsEntered()) 
+            {
+                // Do nothing since this guest hasn't been called yet.
+                System.out.print("");
+                idCalled = maze.getNextToEnter();
+            }
 
-        //     // The minotaur called me.
-        //     if (idCalled == myId)
-        //     {
-        //         System.out.println("Minotaur called guest" + myId);
-        //         maze.resetNextToEnter();
-        //         maze.guestTraverseLabyrinth(myId);
-        //         myStatus = maze.exitProcedure(myId, myStatus);
-        //     }
-        // }
+            // The minotaur called me.
+            if (idCalled == myId)
+            {
+                System.out.println("Minotaur called guest" + myId);
+                maze.resetNextToEnter();
+                maze.guestTraverseLabyrinth(myId);
+                myStatus = maze.exitProcedure(myId, myStatus);
+            }
+        }
 
         // while (maze.getAmtInLabyrinth() > 0) {} // Let the labyrinth game end.
 
@@ -103,7 +105,7 @@ class Guest implements Runnable
         // Random rand = new Random(); // To help decide when to view vase.
         // room.viewVaseTTAS(myId, myStatus.hasSeenVase);
         // room.viewVaseCLHQ(myId, myStatus.hasSeenVase);
-        room.viewVaseMCSQ(myId, myStatus.hasSeenVase);
+        // room.viewVaseMCSQ(myId, myStatus.hasSeenVase);
         // while (!room.allViewedVase())
         // {
         //     while (rand.nextInt(4) != 3) {}
