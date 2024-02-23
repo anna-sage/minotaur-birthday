@@ -8,7 +8,7 @@ Output describes what happens in each of the minotaur's birthday games.
 
 ## Part 1: Minotaur's Labyrinth <br>
 
-Problem: <br>
+### Problem:
 Guests must signal when they have all traveled through the Minotaur's labyrinth using a cupcake 
 on a plate as their only means of communication. <br>
 Solution: <br>
@@ -44,15 +44,44 @@ help ensure correctness. These print statements helped me keep track of who the 
 who actually entered, and how guests interacted with the cupcake. They also helped me monitor how 
 the counter thread was keeping track of cupcake replacements.
 
-## Part 2: Minotaur's Crystal Vase. <br>
+## Part 2: Minotaur's Crystal Vase.
 
-### Viewing Strategies <br>
+### Problem:
+Allow only a single guest at a time in the Minotaur's crystal vase viewing room.
+
+### Viewing Strategies
 Strategy 1: TAS (Test and Set) <br>
-- Pros: This strategy doesn't violate mutual exclusion. 
+- Pros: This strategy doesn't violate mutual exclusion. It is also simple to implement.
 - Cons: getAndSet() calls cause lots of cache misses, which causes bus overuse that blocks other threads.
 Strategy 2: TTAS (Test and Test and Set) <br>
-- Pros: This strategy doesn't violate mutual exclusion and causes less cache misses than TAS since threads spin on local cache.
+- Pros: This strategy doesn't violate mutual exclusion and causes less cache misses than TAS since threads spin on local cache. It is also still simple to implement.
 - Cons: When the lock is released, all spinning threads get a cache miss and call getAndSet() all at once, which causes a storm of bus traffic.
 Strategy 3: Queue-based Spin Locks<br>
 - Pros: Threads access the critical section in FIFO order. Lock releases don't cause an invalidation storm for all spinning threads.
-- Cons: Significant overhead can impact runtime, although this is somewhat implementation dependent.
+- Cons: Significant overhead can impact runtime, although this is somewhat implementation/scenario dependent.
+
+Chosen strategy:<br>
+My implementation uses a TTAS spin lock. My reasons for doing so are outlined in the "Experimental 
+Evaluation" section below.
+
+### Correctness
+A correct implementation ensures mutual exclusion. My solution uses a spin lock that threads must 
+acquire before accessing the critical section, which is being inside the vase viewing room. When 
+one thread is in this critical section, other threads must wait to acquire the lock.
+
+### Efficiency
+The only operations that use locks are those of the critical section. Runtime is also difficult to 
+accurately determine for this problem due to the random nature of when guests decide they want to 
+view the crystal vase.
+
+### Experimental Evaluation
+To decide between strategies 2 and 3, I implemented both and ran some tests. I modified the code to 
+exclude any randomness only for testing purposes, then compared the performance of the TTAS lock, 
+the CLH queue lock, and the MCS queue lock for various amounts of guests. <br>
+
+For small amounts of guests, the differences in runtime were trivial. However, for a large number 
+of guests (100), the queue locks took a little longer than the TTAS lock. This is why my 
+implementation uses strategy 2. I predict this difference is due to the extra overhead in creating 
+many nodes for the guests entering the queue. <br>
+
+The code for the queue implementations is in the "unused-strategies" directory.
