@@ -14,6 +14,7 @@ public class Labyrinth
     // Did the minotaur just call someone or is he waiting?
     private boolean minotaurCalledFirstGuest;
     private long nextToEnter; // Minotaur calls this guest.
+    private int amtInLabyrinth; // How many are currently inside?
     private boolean allGuestsEntered;
 
     // Amount of booleans to return to a guest when they exit.
@@ -29,6 +30,7 @@ public class Labyrinth
         firstGuest = -1;
         minotaurCalledFirstGuest = false;
         nextToEnter = -1;
+        amtInLabyrinth = 0;
         allGuestsEntered = false;
     }
 
