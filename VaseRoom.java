@@ -16,7 +16,8 @@ public class VaseRoom
     int numGuests;
     int numViewers; // How many have seen the case?
 
-    CLHQ myQ;
+    CLHQ myCLHQ;
+    MCSQ myMCSQ;
 
     VaseRoom(int num)
     {
@@ -24,7 +25,8 @@ public class VaseRoom
         guestIds = new long [numGuests];
         numGuests = num;
         numViewers = 0;
-        myQ = new CLHQ();
+        myCLHQ = new CLHQ();
+        myMCSQ = new MCSQ();
     }
 
     // Simple TTAS lock.
@@ -73,7 +75,7 @@ public class VaseRoom
     // CLHQ viewing.
     public void viewVaseCLHQ(long id, boolean hasSeenVase)
     {
-        myQ.lock();
+        myCLHQ.lock();
         System.out.println("\nGuest " + id + " is viewing the vase...");
 
         try
@@ -92,7 +94,32 @@ public class VaseRoom
             numViewers++;
         }
 
-        myQ.unlock();
+        myCLHQ.unlock();
+    }
+
+    // MCSQ viewing.
+    public void viewVaseMCSQ(long id, boolean hasSeenVase)
+    {
+        myMCSQ.lock();
+        System.out.println("\nGuest " + id + " is viewing the vase...");
+
+        try
+        {
+            TimeUnit.MILLISECONDS.sleep(TIME_TO_VIEW);
+        }
+        catch (Exception e)
+        {
+            System.out.println(e.getMessage());
+        }
+
+        System.out.println("Guest " + id + " leaves the viewing room.");
+
+        if (!hasSeenVase)
+        {
+            numViewers++;
+        }
+
+        myMCSQ.unlock();
     }
 
     // Get the amount of guests who have viewed the vase at least once.
@@ -109,60 +136,44 @@ public class VaseRoom
 
 class CLHQ
 {
-    AtomicBoolean tail;
-    // ThreadLocal<QNode> myPred;
-    // ThreadLocal<QNode> myNode;
+    AtomicReference<QNode> tail;
+    ThreadLocal<QNode> myPred;
+    ThreadLocal<QNode> myNode;
 
     // Constructor initializes the node and makes the predecessor null.
     CLHQ()
     {
-        this.tail.set(false);
+        tail = new AtomicReference<QNode>(new QNode());
 
         // Initialize thread local node.
-        this.myNode = new ThreadLocal<QNode>() 
-        {
-            protected QNode initialValue() 
-            {
-                return new QNode();
-            }
-        };
+        myNode = ThreadLocal.withInitial(() -> new QNode());
 
-        // Initialize the prev node to null.
-        this.myPred = new ThreadLocal<QNode>()
-        {
-            protected QNode initialValue()
-            {
-                return null;
-            }
-        };
+        // Initialize the prev node.
+        myPred = ThreadLocal.withInitial(() -> null);
     }
 
     // Acquire the lock before entering a critical section.
     public void lock()
     {
-        System.out.println("Trying to get lock");
-        boolean myVal = Thread.currentThread().getMyVal();
-        Thread.currentThread().setMyVal(true);
+        QNode node = myNode.get();
+        node.locked = true;
 
-        boolean pred = tail.getAndSet(myVal);
-        boolean myPred = Thread.currentThread().getMyPred();
-        Thread.currentThread().setMyPred(pred);
+        QNode pred = tail.getAndSet(node);
+        myPred.set(pred);
         while (pred.locked) {}
     }
 
     public void unlock()
     {
-        boolean myVal = Thread.currentThread().getMyVal();
-        Thread.currentThread().setMyVal(false);
-        boolean myPred = Thread.currentThreas().getMyPred();
-        Thread.currentThread().setMyVal(myPred);
-        System.out.println("unlocked");
+        QNode node = myNode.get();
+        node.locked = false;
+        myNode.set(myPred.get());
     }
 }
 
 class QNode
 {
-    public boolean locked;
+    public volatile boolean locked;
 
     public QNode()
     {
@@ -179,4 +190,58 @@ class QNode
     // {
     //     this = newNode;
     // }
+}
+
+class MCSQ
+{
+    AtomicReference<MCSNode> tail;
+    ThreadLocal<MCSNode> myNode;
+
+    public MCSQ()
+    {
+        tail = new AtomicReference<MCSNode>(null);
+
+        // Initialize thread local node.
+        myNode = ThreadLocal.withInitial(() -> new MCSNode());
+    }
+
+    public void lock()
+    {
+        MCSNode node = myNode.get();
+        MCSNode pred = tail.getAndSet(node);
+
+        if (pred != null)
+        {
+            node.locked = true;
+            pred.next = node;
+            while (node.locked) {}
+        }
+    }
+
+    public void unlock()
+    {
+        MCSNode node = myNode.get();
+        if (node.next == null)
+        {
+            if (tail.compareAndSet(node, null))
+                return;
+
+            while (node.next == null) {}
+        }
+
+        node.next.locked = false;
+        node.next = null;
+    }
+}
+
+class MCSNode
+{
+    public volatile boolean locked;
+    public volatile MCSNode next;
+
+    public MCSNode()
+    {
+        locked = false;
+        next = null;
+    }
 }
