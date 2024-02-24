@@ -17,7 +17,7 @@ eat a cupcake.
 * Only this thread can replace the cupcake. Every replacement increments a counter.
 * Other threads will eat the cupcake only once, if the cupcake is available.
 * Once the counter thread's count reaches N - 1, they indicate to the minotaur that all threads 
-have traversed the labyrinth at least once.
+have traversed the labyrinth at least once.<br>
 Note: N is represented by constant NUM_GUESTS in Main.java.
 
 ### Correctness
@@ -54,10 +54,10 @@ Allow only a single guest at a time in the Minotaur's crystal vase viewing room.
 ### Viewing Strategies
 Strategy 1: This strategy is similar to TAS (Test and Set) <br>
 - Pros: This strategy doesn't violate mutual exclusion. It is also simple to implement.
-- Cons: getAndSet() calls cause lots of cache misses, which causes bus overuse that blocks other threads.
+- Cons: getAndSet() calls cause lots of cache misses, which causes bus overuse that blocks other threads.<br>
 Strategy 2: This strategy is similar to TTAS (Test and Test and Set) <br>
 - Pros: This strategy doesn't violate mutual exclusion and causes less cache misses than TAS since threads spin on local cache. It is also still simple to implement.
-- Cons: When the lock is released, all spinning threads get a cache miss and call getAndSet() all at once, which causes a storm of bus traffic.
+- Cons: When the lock is released, all spinning threads get a cache miss and call getAndSet() all at once, which causes a storm of bus traffic.<br>
 Strategy 3: This strategy reflects queue-based Spin Locks<br>
 - Pros: Threads access the critical section in FIFO order. Lock releases don't cause an invalidation storm for all spinning threads.
 - Cons: Significant overhead can impact runtime, although this is somewhat implementation/scenario dependent. The code for this approach is not as simple as the code for strategies 1 and 2.
