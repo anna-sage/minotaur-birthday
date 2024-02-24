@@ -1,17 +1,14 @@
 // The maze for part 1 of the assignment.
-import java.util.concurrent.*; // todo consolidate.
-import java.util.Random;
+
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ExecutorService;
+import java.util.Random;
 
 public class Labyrinth
 {
     // Fields
     private boolean cupcake; // Is a cupcake on the plate?
-    // Did the minotaur just call someone or is he waiting?
-    private boolean minotaurCalledFirstGuest;
     private int numGuests;
-    private AtomicInteger amtInLabyrinth; // How many are currently inside?
     private boolean allGuestsEntered;
 
     // Local thread info node.
@@ -32,7 +29,6 @@ public class Labyrinth
     {
         cupcake = true;
         numGuests = numG;
-        amtInLabyrinth = new AtomicInteger(0);
         allGuestsEntered = false;
 
         // Initialize thread local node.
@@ -68,17 +64,17 @@ public class Labyrinth
         System.out.println("A guest reports that all guests have traversed at least once!");
     }
 
+    // The current thread will be responsible for counting replacements.
     public void setCounterThread()
     {
         GuestNode myNode = guestInfo.get();
-        myNode.isFirstCalled = true;
+        myNode.isCounter = true;
     }
 
     // A guest takes some random amount of time to traverse the labyrinth.
     public void guestTraverseLabyrinth(String guestName)
     {
         // System.out.println(guestName + " traversing.");
-        amtInLabyrinth.getAndIncrement();
 
         Random rand = new Random();
         int traverseTime = rand.nextInt(6) + 1;
@@ -97,18 +93,14 @@ public class Labyrinth
     {
         // Get the current thread's local status node.
         GuestNode node = guestInfo.get();
-        // System.out.println(name + "'s info:\n" + 
-        //     "isCounter: " + node.isFirstCalled + "\n" + 
-        //     "counter: " + node.counter + "\n" + 
-        //     "hasEaten: " + node.hasEaten + "\n");
 
         // Try to eat if I haven't yet and I'm not the counter thread.
-        if (!node.hasEaten && !node.isFirstCalled)
+        if (!node.hasEaten && !node.isCounter)
         {
             node.hasEaten = tryEating(name);
         }
             
-        if (node.isFirstCalled)
+        if (node.isCounter)
         {
             // Replace the cupcake and increment my counter.
             if (!cupcake)
@@ -120,8 +112,6 @@ public class Labyrinth
             if (node.counter == (numGuests - 1))
                 allGuestsEntered = true;
         }
-
-        amtInLabyrinth.getAndDecrement();
     }
 
     // Attempt to eat the cupcake. Returns whether the guest was able to eat.
@@ -143,22 +133,22 @@ public class Labyrinth
         cupcake = true;
     }
 
-    // Allows main driver to wait until all have finished traversing.
-    public int getAmtInLabyrinth()
+    public boolean labyrinthGameFinished()
     {
-        return amtInLabyrinth.get();
+        return allGuestsEntered;
     }
 }
 
+// Stores information about a particular guest.
 class GuestNode
 {
-    public boolean isFirstCalled;
+    public boolean isCounter;
     public boolean hasEaten;
     public int counter;
 
     public GuestNode(boolean first, boolean eaten, int ct)
     {
-        isFirstCalled = first;
+        isCounter = first;
         hasEaten = eaten;
         counter = ct;
     }

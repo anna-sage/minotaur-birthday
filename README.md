@@ -9,22 +9,21 @@ Output describes what happens in each of the minotaur's birthday games.
 ## Part 1: Minotaur's Labyrinth <br>
 
 ### Problem:
-Guests must signal when they have all traveled through the Minotaur's labyrinth using a cupcake 
+N Guests must signal when they have all traveled through the Minotaur's labyrinth using a cupcake 
 on a plate as their only means of communication. <br>
 Solution: <br>
-* Designate the first thread to enter as the counting / replacing thread.
+* Designate the first thread to enter as the counting / replacing thread. This thread will never 
+eat a cupcake.
 * Only this thread can replace the cupcake. Every replacement increments a counter.
 * Other threads will eat the cupcake only once, if the cupcake is available.
-* Once the counter thread's count reaches the amount of guests, they indicate to the minotaur that 
-all threads have traversed the labyrinth at least once.
-    * Note that the counter thread will also eat a single cupcake/replace what it ate and count 
-    itself.
+* Once the counter thread's count reaches N - 1, they indicate to the minotaur that all threads 
+have traversed the labyrinth at least once.
 
 ### Correctness
 Correct results mean that the designated counter thread does not notify the minotaur that all 
 guests have completed the labyrinth until they are 100% sure this is the case. It is possible for 
 multiple guests to be traversing the maze at the same time. This means that the solution must 
-prevent race conditions involving eating and replacing the cupcake.
+prevent race conditions involving eating the cupcake.
 
 Allowing only the counter thread to replace the cupcake and dictating that all threads may only eat 
 once ensures that the counter thread's count is accurate. In addition, making the labyrinth exit 
@@ -43,6 +42,8 @@ I included many "debugging" print statements that are no longer present in the f
 help ensure correctness. These print statements helped me keep track of who the minotaur summoned, 
 who actually entered, and how guests interacted with the cupcake. They also helped me monitor how 
 the counter thread was keeping track of cupcake replacements.
+
+I checked that exactly N - 1 "Thread-0 is calling for a replacement!" statements were printed.
 
 ## Part 2: Minotaur's Crystal Vase.
 

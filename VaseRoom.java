@@ -1,9 +1,10 @@
 // Room that holds the minotaur's crystal vase with a queue-based lock system.
 
-import java.util.concurrent.*; // todo consolidate
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.locks.Lock;
 import java.util.Random;
 import java.util.HashSet;
@@ -15,13 +16,9 @@ public class VaseRoom
     // Acts as the lock for the critical section (viewing the vase in the room).
     AtomicBoolean roomTaken;
     int numGuests;
-    // int numViewers; // How many have seen the vase?
 
-    CLHQ myCLHQ;
-    MCSQ myMCSQ;
-
-    // Thread local tracker for if thread has seen the vase.
-    ThreadLocal<Boolean> seenVase;
+    CLHQueue myCLHQ;
+    MCSQueue myMCSQ;
 
     // Thread task to enter the viewing room.
     class GuestVaseTask implements Runnable
@@ -29,7 +26,7 @@ public class VaseRoom
         public void run()
         {
             String name = Thread.currentThread().getName();
-            viewVaseTTAS(name, getSeenVase());
+            viewVaseTTAS(name);
         }
     }
 
@@ -37,13 +34,11 @@ public class VaseRoom
     {
         roomTaken = new AtomicBoolean(false);
         numGuests = num;
-        // numViewers = 0;
-        myCLHQ = new CLHQ();
-        myMCSQ = new MCSQ();
-
-        seenVase = ThreadLocal.withInitial(() -> false);
+        myCLHQ = new CLHQueue();
+        myMCSQ = new MCSQueue();
     }
 
+    // Starts the process of guests going to view the vase.
     public void beginVaseViewing(ExecutorService [] guests)
     {
         Random rand = new Random();
@@ -59,11 +54,6 @@ public class VaseRoom
             guests[guestIdx].submit(new GuestVaseTask());
             idxsViewed.add(guestIdx);
         }
-    }
-
-    public boolean getSeenVase()
-    {
-        return seenVase.get();
     }
 
     // Simple TTAS lock.
@@ -85,7 +75,7 @@ public class VaseRoom
     }
 
     // Actually try to enter the room.
-    public void viewVaseTTAS(String name, boolean hasSeenVase)
+    public void viewVaseTTAS(String name)
     {
         lockTTAS();
         System.out.println("\n" + name + " is viewing the vase...");
@@ -101,19 +91,14 @@ public class VaseRoom
 
         System.out.println(name + " leaves the viewing room.");
 
-        // if (!hasSeenVase)
-        // {
-        //     numViewers++;
-        // }
-
         unlockTTAS();
     }
 
     // CLHQ viewing.
-    public void viewVaseCLHQ(long id, boolean hasSeenVase)
+    public void viewVaseCLHQ(String name)
     {
         myCLHQ.lock();
-        System.out.println("\nGuest " + id + " is viewing the vase...");
+        System.out.println("\n" + name + " is viewing the vase...");
 
         try
         {
@@ -124,21 +109,16 @@ public class VaseRoom
             System.out.println(e.getMessage());
         }
 
-        System.out.println("Guest " + id + " leaves the viewing room.");
-
-        // if (!hasSeenVase)
-        // {
-        //     numViewers++;
-        // }
+        System.out.println(name + " leaves the viewing room.");
 
         myCLHQ.unlock();
     }
 
     // MCSQ viewing.
-    public void viewVaseMCSQ(long id, boolean hasSeenVase)
+    public void viewVaseMCSQ(String name)
     {
         myMCSQ.lock();
-        System.out.println("\nGuest " + id + " is viewing the vase...");
+        System.out.println("\n" + name + " is viewing the vase...");
 
         try
         {
@@ -149,36 +129,24 @@ public class VaseRoom
             System.out.println(e.getMessage());
         }
 
-        System.out.println("Guest " + id + " leaves the viewing room.");
-
-        // if (!hasSeenVase)
-        // {
-        //     numViewers++;
-        // }
+        System.out.println(name + " leaves the viewing room.");
 
         myMCSQ.unlock();
     }
-
-    // Get the amount of guests who have viewed the vase at least once.
-    // public boolean allViewedVase()
-    // {
-    //     return !(numViewers < numGuests);
-    // }
 }
 
-class CLHQ
+class CLHQueue
 {
-    AtomicReference<QNode> tail;
-    ThreadLocal<QNode> myPred;
-    ThreadLocal<QNode> myNode;
+    AtomicReference<CLHNode> tail;
+    ThreadLocal<CLHNode> myPred;
+    ThreadLocal<CLHNode> myNode;
 
-    // Constructor initializes the node and makes the predecessor null.
-    CLHQ()
+    public CLHQueue()
     {
-        tail = new AtomicReference<QNode>(new QNode());
+        tail = new AtomicReference<CLHNode>(new CLHNode());
 
         // Initialize thread local node.
-        myNode = ThreadLocal.withInitial(() -> new QNode());
+        myNode = ThreadLocal.withInitial(() -> new CLHNode());
 
         // Initialize the prev node.
         myPred = ThreadLocal.withInitial(() -> null);
@@ -187,49 +155,38 @@ class CLHQ
     // Acquire the lock before entering a critical section.
     public void lock()
     {
-        QNode node = myNode.get();
+        CLHNode node = myNode.get();
         node.locked = true;
 
-        QNode pred = tail.getAndSet(node);
+        CLHNode pred = tail.getAndSet(node);
         myPred.set(pred);
         while (pred.locked) {}
     }
 
     public void unlock()
     {
-        QNode node = myNode.get();
+        CLHNode node = myNode.get();
         node.locked = false;
         myNode.set(myPred.get());
     }
 }
 
-class QNode
+class CLHNode
 {
     public volatile boolean locked;
 
-    public QNode()
+    public CLHNode()
     {
         locked = false;
     }
-
-    // // Returns a reference to this node.
-    // public QNode get()
-    // {
-    //     return this; // todo is this valid?
-    // }
-
-    // public void set(QNode newNode)
-    // {
-    //     this = newNode;
-    // }
 }
 
-class MCSQ
+class MCSQueue
 {
     AtomicReference<MCSNode> tail;
     ThreadLocal<MCSNode> myNode;
 
-    public MCSQ()
+    public MCSQueue()
     {
         tail = new AtomicReference<MCSNode>(null);
 
