@@ -1,4 +1,4 @@
-// The maze for part 1 of the assignment.
+// The labyrinth for part 1 of the assignment.
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ExecutorService;
@@ -129,7 +129,7 @@ public class Labyrinth
 
     private void replaceCupcake(String name)
     {
-        System.out.println(name + " is calling for a replacement");
+        System.out.println(name + " is calling for a replacement cupcake!");
         cupcake = true;
     }
 

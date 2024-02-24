@@ -1,11 +1,8 @@
 // Room that holds the minotaur's crystal vase with a queue-based lock system.
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.locks.Lock;
 import java.util.Random;
 import java.util.HashSet;
 
@@ -41,10 +38,7 @@ public class VaseRoom
     {
         Random rand = new Random();
 
-        // Stop earlier when there are more guests.
-        int stoppingPoint = numGuests >= 50 ? numGuests / 2 : numGuests;
-
-        while (viewed.size() < stoppingPoint)
+        while (viewed.size() < numGuests)
         {
             // Generate a random thread to view the vase.
             int guestIdx = rand.nextInt(numGuests);

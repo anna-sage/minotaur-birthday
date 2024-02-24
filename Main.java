@@ -1,8 +1,6 @@
 // Author: Anna MacInnis, Last update on 2/19/2024.
 // Part 1: Minotaur's maze with cupcake at the end.
 // Part 2: Minotaur's crystal vase viewing with mutual exclusion.
-// TODO : eustis check.
-// TODO : move queue code to separate folders
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Executors;
@@ -57,7 +55,7 @@ public class Main
             // Make sure program doesn't run forever.
             try 
             {
-                if (!guests[i].awaitTermination(10000, TimeUnit.MILLISECONDS)) {
+                if (!guests[i].awaitTermination(30000, TimeUnit.MILLISECONDS)) {
                     guests[i].shutdownNow();
                 } 
             } 
@@ -72,7 +70,8 @@ public class Main
 // To make guests.
 class GuestFactory implements ThreadFactory 
 {
-    public Thread newThread(Runnable r) {
+    public Thread newThread(Runnable r) 
+    {
       return new Thread(r);
     }
 }

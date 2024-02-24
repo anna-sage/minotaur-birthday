@@ -6,7 +6,6 @@ public class MCSQueue
 {
     AtomicReference<MCSNode> tail;
     ThreadLocal<MCSNode> myNode;
-    // Reference to hash set used in VaseRoom.
 
     public MCSQueue()
     {
