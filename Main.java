@@ -49,9 +49,22 @@ public class Main
         room.beginVaseViewing(guests);
 
 
+        // Shut down threads.
         for (int i = 0; i < NUM_GUESTS; i++)
         {
             guests[i].shutdown();
+
+            // Make sure program doesn't run forever.
+            try 
+            {
+                if (!guests[i].awaitTermination(10000, TimeUnit.MILLISECONDS)) {
+                    guests[i].shutdownNow();
+                } 
+            } 
+            catch (Exception e) 
+            {
+                guests[i].shutdownNow();
+            }
         }
     }
 }

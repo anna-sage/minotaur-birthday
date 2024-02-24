@@ -62,8 +62,8 @@ Strategy 3: Queue-based Spin Locks<br>
 - Cons: Significant overhead can impact runtime, although this is somewhat implementation/scenario dependent.
 
 Chosen strategy:<br>
-My implementation uses a TTAS spin lock. My reasons for doing so are outlined in the "Experimental 
-Evaluation" section below.
+My implementation uses a CLH queue spin lock. My reasons for doing so are outlined in the 
+"Experimental Evaluation" section below.
 
 ### Correctness
 A correct implementation ensures mutual exclusion. My solution uses a spin lock that threads must 
@@ -81,8 +81,10 @@ exclude any randomness only for testing purposes, then compared the performance 
 the CLH queue lock, and the MCS queue lock for various amounts of guests. <br>
 
 For small amounts of guests, the differences in runtime were trivial. However, for a large number 
-of guests (100), the queue locks took a little longer than the TTAS lock. This is why my 
-implementation uses strategy 2. I predict this difference is due to the extra overhead in creating 
-many nodes for the guests entering the queue. <br>
+of guests (100), the TTAS lock took a little longer than the queue locks. This is why my 
+implementation uses strategy 3. I predict this difference is due to the TTAS lock's invalidation 
+storm of many threads on the shared bus when one thread releases the lock. <br>
 
-The code for the queue implementations is in the "unused-strategies" directory.
+There was little difference between the execution times of the CLH queue versus the MCS queue, so 
+I chose the CLH queue. The code for the TTAS and MCS queue implementations is in the 
+"unused-strategies" directory.
